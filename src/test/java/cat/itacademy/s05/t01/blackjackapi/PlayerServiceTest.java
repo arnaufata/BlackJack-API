@@ -2,6 +2,7 @@ package cat.itacademy.s05.t01.blackjackapi;
 
 import cat.itacademy.s05.t01.blackjackapi.exception.DatabaseException;
 import cat.itacademy.s05.t01.blackjackapi.model.Player;
+import cat.itacademy.s05.t01.blackjackapi.service.RankingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -23,6 +24,9 @@ public class PlayerServiceTest {
     @Mock
     private PlayerRepository playerRepository;
 
+    @Mock
+    private RankingService rankingService;
+
     @InjectMocks
     private PlayerService playerService;
 
@@ -35,16 +39,19 @@ public class PlayerServiceTest {
     void testCreatePlayer() {
         Player player = new Player("Edgar");
         when(playerRepository.save(any(Player.class))).thenReturn(Mono.just(player));
+        when(rankingService.updateRanking(any(Player.class))).thenReturn(Mono.empty());
+
 
         Mono<Player> result = playerService.createPlayer("Edgar");
 
         // Verificar el flux reactiu amb StepVerifier
         StepVerifier.create(result)
-                .expectNext(player) // Esperem el jugador creat
+                .expectNextMatches(p -> p.getName().equals("Edgar")) // Esperem el jugador creat
                 .verifyComplete();  // Comprovem que el Mono acaba correctament
 
         // Verificar que es va cridar el mètode de save al repositori
         verify(playerRepository, times(1)).save(any(Player.class));
+        verify(rankingService, times(1)).updateRanking(any(Player.class));  // Verifica també el servei de ranking
     }
 
     @Test
@@ -56,6 +63,8 @@ public class PlayerServiceTest {
         // Simulem el retorn de getPlayerById i save
         when(playerRepository.findById(7L)).thenReturn(Mono.just(player));
         when(playerRepository.save(any(Player.class))).thenReturn(Mono.just(player));
+        when(rankingService.updateRanking(any(Player.class))).thenReturn(Mono.empty());
+
 
         // Provar l'actualització del nom
         Mono<Player> result = playerService.updatePlayerName(7L, "Updated Name");
@@ -68,6 +77,7 @@ public class PlayerServiceTest {
         // Verifiquem que getPlayerById i save han estat cridats
         verify(playerRepository, times(1)).findById(7L);
         verify(playerRepository, times(1)).save(any(Player.class));
+        verify(rankingService, times(1)).updateRanking(any(Player.class));  // Verifica també el servei de ranking
     }
 
     @Test

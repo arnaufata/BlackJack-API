@@ -19,6 +19,9 @@ public class GameService {
     @Autowired
     private PlayerService playerService;
 
+    @Autowired
+    private RankingService rankingService;
+
     public Mono<Game> createNewGame(Long playerId, double bet) {
         return playerService.getPlayerById(playerId)
                 .flatMap(player -> {
@@ -57,19 +60,16 @@ public class GameService {
                         return Mono.error(new InvalidGameActionException("La partida ja ha finalitzat amb l'estat: " + game.getStatus()));
                     }
 
-                    // Jugada del jugador
                     if (hit) {
                         game.getPlayerHand().addCard(game.getDeck().robarCarta());
                         if (game.getPlayerHand().isBusted()) {
                             game.setStatus("DEALER_WINS");
                         }
                     } else {
-                        // Jugada del crupier
                         while (game.getDealerHand().getTotalValue() < 17) {
                             game.getDealerHand().addCard(game.getDeck().robarCarta());
                         }
 
-                        // Comprovació del resultat
                         int playerTotal = game.getPlayerHand().getTotalValue();
                         int dealerTotal = game.getDealerHand().getTotalValue();
 
@@ -82,18 +82,17 @@ public class GameService {
                         }
                     }
 
-                    // Comprovem si la partida ha finalitzat per actualitzar les estadístiques
                     if (!game.getStatus().equals("IN_PROGRESS")) {
                         return playerService.getPlayerById(game.getPlayer().getId())
                                 .flatMap(player -> {
-                                    // Utilitzem `updatePlayerStats` amb true si el jugador guanya, false si empata o perd
                                     boolean playerWin = "PLAYER_WINS".equals(game.getStatus());
-                                    return playerService.updatePlayerStats(player, playerWin);
-                                }).then(gameRepository.save(game))
+                                    return playerService.updatePlayerStats(player, playerWin)
+                                            .then(rankingService.updateRanking(player))
+                                            .thenReturn(game);
+                                }).flatMap(gameRepository::save)
                                 .onErrorResume(e -> Mono.error(new DatabaseException("No s'ha pogut actualitzar la partida")));
                     }
 
-                    // Si la partida continua, només la desem sense actualitzar estadístiques
                     return gameRepository.save(game);
                 });
     }

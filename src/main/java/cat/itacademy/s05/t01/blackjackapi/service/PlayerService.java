@@ -15,9 +15,14 @@ public class PlayerService {
     @Autowired
     private PlayerRepository playerRepository;
 
+    @Autowired
+    private RankingService rankingService;
+
     public Mono<Player> createPlayer(String nom) {
         Player player = new Player(nom);
         return playerRepository.save(player)
+                .flatMap(p -> rankingService.updateRanking(p)
+                        .thenReturn(p))
                 .onErrorResume(e -> Mono.error(new DatabaseException("No s'ha pogut crear el jugador")));
     }
 
@@ -32,6 +37,8 @@ public class PlayerService {
                 .flatMap(player -> {
                     player.setName(newName);
                     return playerRepository.save(player)
+                            .flatMap(p -> rankingService.updateRanking(p)
+                                    .thenReturn(p))
                             .onErrorResume(e -> Mono.error(new DatabaseException("No s'ha pogut actualitzar el nom del jugador")));
                 });
     }
@@ -52,6 +59,7 @@ public class PlayerService {
         } else {
             player.incrementDefeats();
         }
-        return playerRepository.save(player).then();
+        return playerRepository.save(player)
+                .then(rankingService.updateRanking(player));
     }
 }

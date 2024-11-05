@@ -43,8 +43,10 @@ public class PlayerController {
     @PutMapping("/{playerId}")
     public Mono<ResponseEntity<Player>> updatePlayerName (
             @Parameter(description = "ID del jugador") @PathVariable Long playerId,
-            @Parameter(description = "Nou nom del jugador") @RequestBody Map<String, String> requestBody) {
-        String newName = requestBody.get("newName");
+            @RequestBody String newName) {
+
+        newName = newName.replaceAll("^\"|\"$", "");
+
         return playerService.updatePlayerName(playerId, newName)
                 .map(ResponseEntity::ok);
     }

@@ -3,6 +3,7 @@ package cat.itacademy.s05.t01.blackjackapi.service;
 import cat.itacademy.s05.t01.blackjackapi.model.Player;
 import cat.itacademy.s05.t01.blackjackapi.model.Ranking;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -17,6 +18,7 @@ public class RankingService {
     private RankingRepository rankingRepository;
 
     @Autowired
+    @Lazy
     private PlayerService playerService;
 
     public Mono<Ranking> getRankingForPlayer(Long playerId) {
@@ -41,6 +43,7 @@ public class RankingService {
     }
 
     private int calcularPuntuacio(Player player) {
-        return (player.getTotalVictories() * 3) - player.getTotalDefeats();
+        int score = (player.getTotalVictories() * 3) - player.getTotalDefeats();
+        return Math.max(score, 0);
     }
 }
